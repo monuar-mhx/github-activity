@@ -136,9 +136,12 @@ app.all('/api/commit', async (req, res) => {
         const updateRefResp = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${branch}`, {
             method: "PATCH",
             headers,
-            body: JSON.stringify({ sha: currentParentSha })
+            body: JSON.stringify({ sha: currentParentSha, force: true })
         });
-        if (!updateRefResp.ok) throw new Error(`Failed to update branch reference: ${updateRefResp.statusText}`);
+        if (!updateRefResp.ok) {
+            const errorData = await updateRefResp.json().catch(() => ({}));
+            throw new Error(`Failed to update branch reference: ${updateRefResp.statusText} ${JSON.stringify(errorData)}`);
+        }
 
         return res.status(200).json({ 
             success: true, 
