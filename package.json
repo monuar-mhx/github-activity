@@ -1,0 +1,25 @@
+{
+  "name": "github-activity",
+  "version": "1.0.0",
+  "description": "Vercel serverless project",
+  "license": "ISC",
+  "author": "Mahatab Hossen Sudip",
+  "type": "module",
+  "main": "api/index.js",
+  "scripts": {
+    "start": "node api/index.js",
+    "dev": "nodemon api/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "engines": {
+    "node": ">=18.x"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14",
+    "vercel": "^50.28.0"
+  },
+  "dependencies": {
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1"
+  }
+}
