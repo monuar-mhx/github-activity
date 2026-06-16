@@ -10,7 +10,7 @@ An automated GitHub commit bot that runs on **Vercel Cron Jobs** to keep your Gi
 
 ### 🔥 Contribution Streak
 
-<img src="https://streak-stats.demolab.com?user=SudipMHX&theme=tokyonight&hide_border=true&background=0D1117&ring=00ffff&fire=00ffff&currStreakLabel=00ffff" alt="SudipMHX's GitHub Contribution Streak"/>
+<img src="https://streak-stats.demolab.com?user=monuar-mhx&theme=tokyonight&hide_border=true&background=0D1117&ring=00ffff&fire=00ffff&currStreakLabel=00ffff" alt="monuar-mhx's GitHub Contribution Streak"/>
 
 </div>
 
@@ -20,7 +20,7 @@ An automated GitHub commit bot that runs on **Vercel Cron Jobs** to keep your Gi
 
 ### 📈 Contribution Activity
 
-<img src="https://github-readme-activity-graph.vercel.app/graph?username=SudipMHX&theme=tokyo-night&hide_border=true&line=00ffff&point=ffffff&area=true" alt="SudipMHX's GitHub Contribution Activity Graph"/>
+<img src="https://github-readme-activity-graph.vercel.app/graph?username=monuar-mhx&theme=tokyo-night&hide_border=true&line=00ffff&point=ffffff&area=true" alt="monuar-mhx's GitHub Contribution Activity Graph"/>
 
 </div>
 
@@ -88,7 +88,7 @@ github-activity/
 ### 1. Fork / Clone the Repository
 
 ```bash
-git clone https://github.com/SudipMHX/github-activity.git
+git clone https://github.com/monuar-mhx/github-activity.git
 cd github-activity
 ```
 
@@ -98,7 +98,7 @@ Open `api/index.js` and update the `owner` and `repo` values on **lines 25–26*
 
 ```js
 // api/index.js — lines 25-26
-const owner = "SudipMHX";       // ← Change to your GitHub username
+const owner = "monuar-mhx";       // ← Change to your GitHub username
 const repo  = "github-activity"; // ← Change to your repository name
 ```
 
@@ -211,7 +211,7 @@ export interface Activity {
   category: string    // e.g., "workflow", "performance", "infrastructure"
   message: string     // e.g., "optimize repository performance"
   emoji: string       // e.g., "🚀"
-  author: string      // "SudipMHX"
+  author: string      // "monuar-mhx"
   system: string      // "vercel-cron"
   status: string      // "success"
   environment: string // "production" | "staging" | "development"
@@ -232,4 +232,4 @@ export interface Activity {
 
 ## 📄 License
 
-ISC © [Mahatab Hossen Sudip](https://github.com/SudipMHX)
+ISC © [Mahatab Hossen Sudip](https://github.com/monuar-mhx)
