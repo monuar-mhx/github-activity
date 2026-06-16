@@ -15,16 +15,5 @@
             "src": "/(.*)",
             "dest": "/api/index.js"
         }
-    ],
-    "functions": {
-        "api/index.js": {
-            "memory": 512,
-            "maxDuration": 60,
-            "runtime": "nodejs18.x"
-        }
-    },
-    "env": {
-        "GITHUB_TOKEN": "@github_token",
-        "NODE_ENV": "production"
-    }
+    ]
 }

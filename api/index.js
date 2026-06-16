@@ -18,22 +18,7 @@ app.all('/api/commit', async (req, res) => {
 
         const owner = "monuar-mhx";
         const repo = "github-activity";
-
-        // Bangladesh time (UTC+6)
-        const now = new Date();
-        const bdTime = new Date(now.getTime() + 6 * 60 * 60 * 1000);
-        const year = bdTime.getUTCFullYear();
-        const month = String(bdTime.getUTCMonth() + 1).padStart(2, '0');
-        const day = String(bdTime.getUTCDate()).padStart(2, '0');
-        const hours = String(bdTime.getUTCHours()).padStart(2, '0');
-        const mins = String(bdTime.getUTCMinutes()).padStart(2, '0');
-        const timestampStr = `${year}-${month}-${day} ${hours}:${mins}`;
-
-        // Generate activity
-        const activity = generateActivity(timestampStr);
-
-        // Format commit message
-        const commitMessage = `${activity.emoji} ${activity.type}: ${activity.message}`;
+        const howMany = 5;
 
         const headers = {
             Authorization: `Bearer ${GITHUB_TOKEN}`,
@@ -64,76 +49,103 @@ app.all('/api/commit', async (req, res) => {
         const repoData = await repoResp.json();
         const branch = repoData.default_branch || "main";
 
-        // Get TS file
-        const tsPath = "activity.ts";
-        const tsData = await getFile(tsPath);
-        let tsContent = tsData.content;
-        const tsInterface = `export interface Activity {\nid: string\ntype: string\ncategory: string\nmessage: string\nemoji: string\nauthor: string\nsystem: string\nstatus: string\nenvironment: string\ntags: string[]\ntimestamp: string\n}\n\n`;
+        const commits = [];
+        let currentParentSha = null;
 
-        if (!tsContent.includes("export interface Activity")) {
-            tsContent = tsInterface + tsContent;
+        // Get initial commit SHA
+        const initialRefResp = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${branch}`, { headers });
+        if (!initialRefResp.ok) throw new Error(`Failed to get branch reference: ${initialRefResp.statusText}`);
+        const initialRefData = await initialRefResp.json();
+        currentParentSha = initialRefData.object.sha;
+
+        for (let i = 1; i <= howMany; i++) {
+            // Bangladesh time (UTC+6)
+            const now = new Date();
+            const bdTime = new Date(now.getTime() + 6 * 60 * 60 * 1000);
+            const year = bdTime.getUTCFullYear();
+            const month = String(bdTime.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(bdTime.getUTCDate()).padStart(2, '0');
+            const hours = String(bdTime.getUTCHours()).padStart(2, '0');
+            const mins = String(bdTime.getUTCMinutes()).padStart(2, '0');
+            const timestampStr = `${year}-${month}-${day} ${hours}:${mins}`;
+
+            // Generate activity
+            const activity = generateActivity(timestampStr);
+
+            // Generate 8-digit unique hex code
+            const hexCode = Math.floor(Math.random() * 0xFFFFFFFF).toString(16).padStart(8, '0').toUpperCase();
+
+            // Format commit message
+            const commitMessage = `${activity.emoji} ${activity.type}: ${activity.message} #${hexCode}`;
+
+            // Create file paths in activity directory
+            const tsPath = `activity/activity_${hexCode}.ts`;
+            const jsPath = `activity/activity_${hexCode}.js`;
+
+            // Create TypeScript file content
+            const tsContent = `export interface Activity {\n  id: string;\n  type: string;\n  category: string;\n  message: string;\n  emoji: string;\n  author: string;\n  system: string;\n  status: string;\n  environment: string;\n  tags: string[];\n  timestamp: string;\n}\n\nexport const activity_${activity.id}: Activity = {\n  id: "${activity.id}",\n  type: "${activity.type}",\n  category: "${activity.category}",\n  message: "${activity.message}",\n  emoji: "${activity.emoji}",\n  author: "${activity.author}",\n  system: "${activity.system}",\n  status: "${activity.status}",\n  environment: "${activity.environment}",\n  tags: ${JSON.stringify(activity.tags)},\n  timestamp: "${activity.timestamp}:00"\n};\n`;
+
+            // Create JavaScript file content
+            const jsContent = `export const activity_${activity.id} = {\n  id: "${activity.id}",\n  type: "${activity.type}",\n  category: "${activity.category}",\n  message: "${activity.message}",\n  emoji: "${activity.emoji}",\n  author: "${activity.author}",\n  system: "${activity.system}",\n  status: "${activity.status}",\n  environment: "${activity.environment}",\n  tags: ${JSON.stringify(activity.tags)},\n  timestamp: "${activity.timestamp}:00"\n};\n`;
+
+            // Get current commit
+            const commitResp = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/commits/${currentParentSha}`, { headers });
+            if (!commitResp.ok) throw new Error(`Failed to get commit: ${commitResp.statusText}`);
+            const commitData = await commitResp.json();
+            const baseTreeSha = commitData.tree.sha;
+
+            // Create new tree with both files
+            const treeResp = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees`, {
+                method: "POST",
+                headers,
+                body: JSON.stringify({
+                    base_tree: baseTreeSha,
+                    tree: [
+                        { path: tsPath, mode: "100644", type: "blob", content: tsContent },
+                        { path: jsPath, mode: "100644", type: "blob", content: jsContent }
+                    ]
+                })
+            });
+            if (!treeResp.ok) throw new Error(`Failed to create tree: ${treeResp.statusText}`);
+            const treeData = await treeResp.json();
+            const newTreeSha = treeData.sha;
+
+            // Create new commit
+            const newCommitResp = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/commits`, {
+                method: "POST",
+                headers,
+                body: JSON.stringify({
+                    message: commitMessage,
+                    tree: newTreeSha,
+                    parents: [currentParentSha]
+                })
+            });
+            if (!newCommitResp.ok) throw new Error(`Failed to create commit: ${newCommitResp.statusText}`);
+            const newCommitData = await newCommitResp.json();
+            const newCommitSha = newCommitData.sha;
+
+            // Update current parent for next iteration
+            currentParentSha = newCommitSha;
+            commits.push({ message: commitMessage, sha: newCommitSha });
+
+            // Minimal delay to avoid rate limiting
+            await new Promise(resolve => setTimeout(resolve, 50));
         }
-        const tsAppend = `export const activity_${activity.id}: Activity = {\nid: "${activity.id}",\ntype: "${activity.type}",\ncategory: "${activity.category}",\nmessage: "${activity.message}",\nemoji: "${activity.emoji}",\nauthor: "${activity.author}",\nsystem: "${activity.system}",\nstatus: "${activity.status}",\nenvironment: "${activity.environment}",\ntags: ${JSON.stringify(activity.tags)},\ntimestamp: "${activity.timestamp}:00"\n};\n\n`;
 
-        // Get JS file
-        const jsPath = "activity.js";
-        const jsData = await getFile(jsPath);
-        let jsContent = jsData.content;
-        const jsAppend = `export const activity_${activity.id} = {\nid: "${activity.id}",\ntype: "${activity.type}",\ncategory: "${activity.category}",\nmessage: "${activity.message}",\nemoji: "${activity.emoji}",\nauthor: "${activity.author}",\nsystem: "${activity.system}",\nstatus: "${activity.status}",\nenvironment: "${activity.environment}",\ntags: ${JSON.stringify(activity.tags)},\ntimestamp: "${activity.timestamp}:00"\n};\n\n`;
-
-        // Create a single commit via Git Database API
-
-        // 1. Get latest commit SHA
-        const refResp = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${branch}`, { headers });
-        if (!refResp.ok) throw new Error(`Failed to get branch reference: ${refResp.statusText}`);
-        const refData = await refResp.json();
-        const latestCommitSha = refData.object.sha;
-
-        // 2. Get base tree SHA
-        const commitResp = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/commits/${latestCommitSha}`, { headers });
-        if (!commitResp.ok) throw new Error(`Failed to get latest commit: ${commitResp.statusText}`);
-        const commitData = await commitResp.json();
-        const baseTreeSha = commitData.tree.sha;
-
-        // 3. Create new tree with both files
-        const treeResp = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees`, {
-            method: "POST",
-            headers,
-            body: JSON.stringify({
-                base_tree: baseTreeSha,
-                tree: [
-                    { path: tsPath, mode: "100644", type: "blob", content: tsContent + tsAppend },
-                    { path: jsPath, mode: "100644", type: "blob", content: jsContent + jsAppend }
-                ]
-            })
-        });
-        if (!treeResp.ok) throw new Error(`Failed to create tree: ${treeResp.statusText}`);
-        const treeData = await treeResp.json();
-        const newTreeSha = treeData.sha;
-
-        // 4. Create new commit
-        const newCommitResp = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/commits`, {
-            method: "POST",
-            headers,
-            body: JSON.stringify({
-                message: commitMessage,
-                tree: newTreeSha,
-                parents: [latestCommitSha]
-            })
-        });
-        if (!newCommitResp.ok) throw new Error(`Failed to create commit: ${newCommitResp.statusText}`);
-        const newCommitData = await newCommitResp.json();
-        const newCommitSha = newCommitData.sha;
-
-        // 5. Update branch reference
+        // Final: Update branch reference to the last commit
         const updateRefResp = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${branch}`, {
             method: "PATCH",
             headers,
-            body: JSON.stringify({ sha: newCommitSha })
+            body: JSON.stringify({ sha: currentParentSha })
         });
         if (!updateRefResp.ok) throw new Error(`Failed to update branch reference: ${updateRefResp.statusText}`);
 
-        return res.status(200).json({ success: true, message: commitMessage, activity, sha: newCommitSha });
+        return res.status(200).json({ 
+            success: true, 
+            message: `Created 50 commits successfully`,
+            commits: commits,
+            finalSha: currentParentSha
+        });
     } catch (err) {
         console.error(err);
         return res.status(500).json({ success: false, error: err.message || String(err) });
