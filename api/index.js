@@ -59,14 +59,14 @@ app.all('/api/commit', async (req, res) => {
         currentParentSha = initialRefData.object.sha;
 
         for (let i = 1; i <= howMany; i++) {
-            // Bangladesh time (UTC+6)
+            // UTC-0 time
             const now = new Date();
-            const bdTime = new Date(now.getTime() + 6 * 60 * 60 * 1000);
-            const year = bdTime.getUTCFullYear();
-            const month = String(bdTime.getUTCMonth() + 1).padStart(2, '0');
-            const day = String(bdTime.getUTCDate()).padStart(2, '0');
-            const hours = String(bdTime.getUTCHours()).padStart(2, '0');
-            const mins = String(bdTime.getUTCMinutes()).padStart(2, '0');
+            const year = now.getUTCFullYear();
+            const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(now.getUTCDate()).padStart(2, '0');
+            const dateStr = `${year}-${month}-${day}`;
+            const hours = String(now.getUTCHours()).padStart(2, '0');
+            const mins = String(now.getUTCMinutes()).padStart(2, '0');
             const timestampStr = `${year}-${month}-${day} ${hours}:${mins}`;
 
             // Generate activity
@@ -78,9 +78,9 @@ app.all('/api/commit', async (req, res) => {
             // Format commit message
             const commitMessage = `${activity.emoji} ${activity.type}: ${activity.message} #${hexCode}`;
 
-            // Create file paths in activity directory
-            const tsPath = `activity/activity_${hexCode}.ts`;
-            const jsPath = `activity/activity_${hexCode}.js`;
+            // Create file paths organized by date directory
+            const tsPath = `activity/${dateStr}/activity_${hexCode}.ts`;
+            const jsPath = `activity/${dateStr}/activity_${hexCode}.js`;
 
             // Create TypeScript file content
             const tsContent = `export interface Activity {\n  id: string;\n  type: string;\n  category: string;\n  message: string;\n  emoji: string;\n  author: string;\n  system: string;\n  status: string;\n  environment: string;\n  tags: string[];\n  timestamp: string;\n}\n\nexport const activity_${activity.id}: Activity = {\n  id: "${activity.id}",\n  type: "${activity.type}",\n  category: "${activity.category}",\n  message: "${activity.message}",\n  emoji: "${activity.emoji}",\n  author: "${activity.author}",\n  system: "${activity.system}",\n  status: "${activity.status}",\n  environment: "${activity.environment}",\n  tags: ${JSON.stringify(activity.tags)},\n  timestamp: "${activity.timestamp}:00"\n};\n`;
